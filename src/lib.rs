@@ -202,7 +202,10 @@ fn decompress_zlib_base64(data: &str) -> Result<String> {
 
 const MAX_JSON_NESTING_DEPTH: usize = 8;
 
-fn parse_json_str<T>(data: &str) -> Result<T, serde_json::Error>
+/// Parse a JSON payload that may be wrapped in nested JSON string encodings
+/// (like qio's `from_json_str`), e.g. into a `Serialization<u16>` when the
+/// serialization format must tolerate discriminants unknown to this crate.
+pub fn parse_json_str<T>(data: &str) -> Result<T, serde_json::Error>
 where
     T: DeserializeOwned,
 {
