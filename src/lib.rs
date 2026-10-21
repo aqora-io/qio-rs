@@ -46,7 +46,6 @@ pub enum QuantumProgramResultSerializationFormat {
     CirqResultJsonV1 = 1,
     QiskitResultJsonV1 = 2,
     CudaqSampleResultJsonV1 = 3,
-    /// QPerfect MIMIQ `QCSResults` as JSON.
     MimiqQcsrJsonV1 = 4,
     // 1000+ is the Aqora-custom range; values below are reserved for the spec.
     PytketBackendResultJsonV1 = 1000,
