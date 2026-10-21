@@ -46,6 +46,8 @@ pub enum QuantumProgramResultSerializationFormat {
     CirqResultJsonV1 = 1,
     QiskitResultJsonV1 = 2,
     CudaqSampleResultJsonV1 = 3,
+    /// QPerfect MIMIQ `QCSResults` as JSON.
+    MimiqQcsrJsonV1 = 4,
     // 1000+ is the Aqora-custom range; values below are reserved for the spec.
     PytketBackendResultJsonV1 = 1000,
     /// Quantinuum's labeled QIR results text schema (`HEADER\tschema_id\tlabeled`).
@@ -301,6 +303,11 @@ mod tests {
         assert_eq!(
             serde_json::to_string(&QuantumProgramSerializationFormat::HugrV1).unwrap(),
             "1001"
+        );
+        assert_eq!(
+            serde_json::to_string(&QuantumProgramResultSerializationFormat::MimiqQcsrJsonV1)
+                .unwrap(),
+            "4"
         );
         assert_eq!(
             serde_json::to_string(
