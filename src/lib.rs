@@ -53,6 +53,8 @@ pub enum QuantumProgramResultSerializationFormat {
     QirLabeledResultV1 = 1001,
     /// Quantinuum's QSYS shot results (hugr `QsysResult`) as a JSON array.
     QsysResultJsonV1 = 1002,
+    /// Amazon Braket's gate-model task result (`braket.task_result.gate_model_task_result`) JSON.
+    BraketGateModelTaskResultJsonV1 = 1003,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
@@ -324,6 +326,13 @@ mod tests {
             serde_json::to_string(&QuantumProgramResultSerializationFormat::QsysResultJsonV1)
                 .unwrap(),
             "1002"
+        );
+        assert_eq!(
+            serde_json::to_string(
+                &QuantumProgramResultSerializationFormat::BraketGateModelTaskResultJsonV1
+            )
+            .unwrap(),
+            "1003"
         );
     }
 
