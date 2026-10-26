@@ -55,6 +55,15 @@ pub enum QuantumProgramResultSerializationFormat {
     QsysResultJsonV1 = 1002,
 }
 
+#[derive(Clone, Copy, Debug, Deserialize_repr, Serialize_repr, Eq, PartialEq)]
+#[repr(u16)]
+pub enum WasmModuleSerializationFormat {
+    UnknownSerializationFormat = 0,
+    // 1000+ is the Aqora-custom range, as for the program and result formats.
+    /// The WASM bytecode, base64-encoded.
+    WasmV1 = 1000,
+}
+
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
 pub struct Serialization<T> {
     pub compression_format: CompressionFormat,
@@ -160,6 +169,7 @@ impl<T> Serialization<T> {
 pub type QuantumProgram = Serialization<QuantumProgramSerializationFormat>;
 pub type QuantumNoiseModel = Serialization<QuantumNoiseModelSerializationFormat>;
 pub type QuantumProgramResult = Serialization<QuantumProgramResultSerializationFormat>;
+pub type WasmModule = Serialization<WasmModuleSerializationFormat>;
 
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
 pub struct ClientData {
@@ -179,6 +189,8 @@ pub struct QuantumComputationModel {
     pub noise_model: Option<QuantumNoiseModel>,
     pub client: Option<ClientData>,
     pub backend: Option<BackendData>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub wasm_module: Option<WasmModule>,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
@@ -242,6 +254,7 @@ impl_json_helpers!(
     QuantumComputationModel,
     QuantumComputationParameters,
     QuantumProgramResult,
+    WasmModule,
 );
 
 #[cfg(test)]
@@ -324,6 +337,53 @@ mod tests {
             serde_json::to_string(&QuantumProgramResultSerializationFormat::QsysResultJsonV1)
                 .unwrap(),
             "1002"
+        );
+        assert_eq!(
+            serde_json::to_string(&WasmModuleSerializationFormat::WasmV1).unwrap(),
+            "1000"
+        );
+    }
+
+    fn model(wasm_module: Option<WasmModule>) -> QuantumComputationModel {
+        QuantumComputationModel {
+            programs: vec![QuantumProgram::new(
+                "OPENQASM 3.0;",
+                QuantumProgramSerializationFormat::QasmV3,
+            )],
+            noise_model: None,
+            client: None,
+            backend: None,
+            wasm_module,
+        }
+    }
+
+    #[test]
+    fn omits_absent_wasm_module() {
+        let json = model(None).to_json_str().unwrap();
+        assert!(!json.contains("wasm_module"));
+        assert_eq!(
+            QuantumComputationModel::from_json_str(&json).unwrap(),
+            model(None)
+        );
+    }
+
+    #[test]
+    fn round_trips_wasm_module() {
+        let wasm_module = WasmModule::new("AGFzbQEAAAA=", WasmModuleSerializationFormat::WasmV1)
+            .to_compression(CompressionFormat::ZlibBase64V1)
+            .unwrap();
+        let with_module = model(Some(wasm_module));
+        let parsed =
+            QuantumComputationModel::from_json_str(&with_module.to_json_str().unwrap()).unwrap();
+        assert_eq!(parsed, with_module);
+        assert_eq!(
+            parsed
+                .wasm_module
+                .unwrap()
+                .to_compression(CompressionFormat::None)
+                .unwrap()
+                .serialization,
+            "AGFzbQEAAAA="
         );
     }
 
