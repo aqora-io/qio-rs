@@ -19,6 +19,7 @@ pub enum CompressionFormat {
 #[derive(Clone, Copy, Debug, Deserialize_repr, Serialize_repr, Eq, PartialEq)]
 #[repr(u16)]
 pub enum QuantumProgramSerializationFormat {
+    #[serde(other)]
     UnknownSerializationFormat = 0,
     QasmV1 = 1,
     QasmV2 = 2,
@@ -35,6 +36,7 @@ pub enum QuantumProgramSerializationFormat {
 #[derive(Clone, Copy, Debug, Deserialize_repr, Serialize_repr, Eq, PartialEq)]
 #[repr(u8)]
 pub enum QuantumNoiseModelSerializationFormat {
+    #[serde(other)]
     UnknownSerializationFormat = 0,
     QiskitAerJsonV1 = 1,
 }
@@ -42,6 +44,7 @@ pub enum QuantumNoiseModelSerializationFormat {
 #[derive(Clone, Copy, Debug, Deserialize_repr, Serialize_repr, Eq, PartialEq)]
 #[repr(u16)]
 pub enum QuantumProgramResultSerializationFormat {
+    #[serde(other)]
     UnknownSerializationFormat = 0,
     CirqResultJsonV1 = 1,
     QiskitResultJsonV1 = 2,
@@ -58,6 +61,7 @@ pub enum QuantumProgramResultSerializationFormat {
 #[derive(Clone, Copy, Debug, Deserialize_repr, Serialize_repr, Eq, PartialEq)]
 #[repr(u16)]
 pub enum WasmModuleSerializationFormat {
+    #[serde(other)]
     UnknownSerializationFormat = 0,
     // 1000+ is the Aqora-custom range, as for the program and result formats.
     /// The WASM bytecode, base64-encoded.
@@ -399,5 +403,42 @@ mod tests {
             plain.to_compression(CompressionFormat::UnknownCompressionFormat),
             Err(CompressionError::UnknownCompressionFormat(_)),
         ));
+    }
+
+    #[test]
+    fn unknown_program_format_falls_back_to_unknown() {
+        let json = r#"{
+            "programs": [
+                {"compression_format": 1, "serialization_format": 3, "serialization": "OPENQASM 3.0;"},
+                {"compression_format": 1, "serialization_format": 8, "serialization": "future"}
+            ],
+            "noise_model": null,
+            "client": null,
+            "backend": null
+        }"#;
+
+        let parsed = QuantumComputationModel::from_json_str(json).unwrap();
+        assert_eq!(
+            parsed.programs[1].serialization_format,
+            QuantumProgramSerializationFormat::UnknownSerializationFormat
+        );
+    }
+
+    #[test]
+    fn unknown_discriminants_deserialize_to_unknown() {
+        assert_eq!(
+            serde_json::from_str::<QuantumNoiseModelSerializationFormat>("200").unwrap(),
+            QuantumNoiseModelSerializationFormat::UnknownSerializationFormat
+        );
+        assert_eq!(
+            serde_json::from_str::<QuantumProgramResultSerializationFormat>("999").unwrap(),
+            QuantumProgramResultSerializationFormat::UnknownSerializationFormat
+        );
+        assert_eq!(
+            serde_json::from_str::<WasmModuleSerializationFormat>("1001").unwrap(),
+            WasmModuleSerializationFormat::UnknownSerializationFormat
+        );
+        // I believe compression may stay strict
+        assert!(serde_json::from_str::<CompressionFormat>("3").is_err());
     }
 }
